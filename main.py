@@ -278,7 +278,7 @@ def extract_transcript(input_video_path, output_dir, output_json_path, source_la
     output_path = os.path.join(output_dir, 'original_voice', 'main_stream.wav')
     
     try:
-        run_threads(audio_files_path, output_json_path, temp_dir, srt_subtitle_output_path, source_language, metadata_list, num_threads=10)
+        run_threads(audio_files_path, output_json_path, temp_dir, srt_subtitle_output_path, source_language, metadata_list, num_threads=5)
         print("Completed Speech-to-Text Conversion")
         output_json = {"segments": metadata_list}
         with open(output_json_path, 'w', encoding='utf-8') as f:
@@ -1045,3 +1045,4 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
