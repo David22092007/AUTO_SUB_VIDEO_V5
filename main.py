@@ -1050,13 +1050,17 @@ if __name__ == "__main__":
         try:
             CHANNEL_ID = "1407577955873460254"
             contents=upload_tempfiles(final_video_path)
-            sending(discord_bot_token,CHANNEL_ID,contents)            
+            print (contents)
+            sending(discord_bot_token,CHANNEL_ID,contents)  
+            a=input('ĐỢI BẠN DUYỆT XEM ĐÃ THÀNH CÔNG CHƯA NÈ')
         except Exception as e:
-            None          
+            print (e)    
+        a=input('CODE GIỜ CHUYỂN ĐẾN XOÁ FILE NHÉ NẾU OKE THÌ TRIỂN')  
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos')      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
