@@ -818,24 +818,28 @@ def convert_detail(segments, srt_content, counter):
                 counter += 1
     return srt_content
 
-def sending(BOT_TOKEN,CHANNEL_ID,test,contents):
+def upload_tempfiles(file_path):
+    url = "https://tmpfiles.org/api/v1/upload"
+    with open(file_path, 'rb') as f:
+        files = {'file': f}
+        response = requests.post(url, files=files)
+    
+    if response.status_code == 200:
+        data = response.json()
+        return data['data']['url']
+    return None
+def split_message(message, max_length=2000):
+    return [message[i:i+max_length] for i in range(0, len(message), max_length)]
+def sending(BOT_TOKEN,CHANNEL_ID,contents):
     files={}
     data={}
-    files.update({"file": test})
     data.update({"content": contents})
     headers = {
         "Authorization": f"Bot {BOT_TOKEN}",
     }
     url = f"https://discordapp.com/api/v8/channels/{CHANNEL_ID}/messages"
 
-    response = requests.post(url, headers=headers,files=files, data=data) 
-
-def discord_bot_sending_attchement(BOT_TOKEN,CHANNEL_ID,filenames,directory):
-    contents=' Video - Scape Data AUTO NETSCAPE'       
-    for i in filenames:
-        with open(f'{directory}/'+i,'rb') as f:
-            text=f.read();f.close()
-        sending(BOT_TOKEN,CHANNEL_ID,test,contents)     
+    response = requests.post(url, headers=headers, data=data)
 if __name__ == "__main__":
     # Cấu hình biến toàn cục
     select_options = '123'
@@ -846,7 +850,7 @@ if __name__ == "__main__":
     lauching_file_path = 'running_id_video.txt'
     srt_content = ""
     counter = 1
-    discord_bot_token='MTQwNzM2NzM1OTYwNTM3NDk5Nw.GgGG2N.FqR2iUMoV3_A4vK7vD_KCo7k1jWZbi-gwdEekc'
+    discord_bot_token='MTQwNzM2NzM1OTYwNTM3NDk5Nw.GAtPnx.x_AYr29XGbvJaDnLIzmdGZLGQjjkwhJ69mQCD4'
     # Các hằng số cho YouTube API
     RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
     SCOPES = "https://www.googleapis.com/auth/youtube.upload"
@@ -1006,7 +1010,7 @@ if __name__ == "__main__":
         except FileNotFoundError:
             print("Lỗi: Không tìm thấy ffmpeg. Hãy đảm bảo ffmpeg đã được cài đặt và thêm vào PATH.")
 
-        increase_audio_volume(output_path_voice_compare, final_video_path, volume_factor=2.0)
+        increase_audio_volume(output_path_voice_compare, final_video_path, volume_factor=1.5)
         if False:    
             subtitle_file = srt_path
             # File đầu ra
@@ -1033,18 +1037,16 @@ if __name__ == "__main__":
                 print("✅ Hoàn tất! Video đã được chèn phụ đề.")
             except subprocess.CalledProcessError as e:
                 print("❌ Lỗi khi chạy FFmpeg:", e)              
-        remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");remove_file(input_video);remove_file(decrease_video_path)
-        while True:        
-            try: 
-                CHANNEL_ID = "1407360272649289773"
-                directory = "Videos"
-                filenames = glob.glob(f"{directory}/*")
-                discord_bot_sending_attchement(discord_bot_token,CHANNEL_ID,filenames,directory)
-                break
-            except Exception as e:
-                None# (e)          
+        remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");remove_file(input_video);remove_file(decrease_video_path)      
+        try:
+            CHANNEL_ID = "1407577955873460254"
+            contents=upload_tempfiles(final_video_path)
+            sending(discord_bot_token,CHANNEL_ID,contents)            
+        except Exception as e:
+            None          
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
