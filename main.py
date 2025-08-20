@@ -398,7 +398,7 @@ class GeminiTranslationManager:
             client = genai.Client(api_key=api_key)
             prompt = """..."""  # Your prompt here
             
-            for name_model in ['gemini-2.5-flash']:
+            for name_model in ['gemini-2.0-flash']:
                 try:
                     response = client.models.generate_content(
                         model=name_model,
