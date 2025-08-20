@@ -279,7 +279,7 @@ def extract_transcript(input_video_path, output_dir, output_json_path, source_la
     output_path = os.path.join(output_dir, 'original_voice', 'main_stream.wav')
     
     try:
-        run_threads(audio_files_path, output_json_path, temp_dir, srt_subtitle_output_path, source_language, metadata_list, num_threads=5)
+        run_threads(audio_files_path, output_json_path, temp_dir, srt_subtitle_output_path, source_language, metadata_list, num_threads=10)
         print("Completed Speech-to-Text Conversion")
         output_json = {"segments": metadata_list}
         with open(output_json_path, 'w', encoding='utf-8') as f:
@@ -396,8 +396,17 @@ class GeminiTranslationManager:
         """Gọi API Gemini để dịch"""
         try:
             client = genai.Client(api_key=api_key)
-            prompt = """..."""  # Your prompt here
-            
+            prompt = (
+                """
+                -Bạn là một công cụ dịch thuật. Nhiệm vụ của bạn là:
+                -1. **Không được giữ lại bất kỳ ký tự gốc nào của văn bản gốc (ví dụ tiếng Trung, tiếng Anh...) trong kết quả.**
+                -2. **Một số tên được dịch không hay bạn có thể biến tên nhân vật theo phong cách Trung Hoa cổ trang, sử dụng cấu trúc "Tiểu + [Tên Nhân Vật]" . Mỗi tên cần thể hiện tính cách, ngoại hình, hoặc vai trò của nhân vật.
+                -3. **Tôi nhấn mạnh lại một điểm phải giữ nguyên định dạng gốc . Ví dụ về một lỗi mà bạn thường sai  00:01 nhưng phải điền là 00:00:01,000 .Hãy chú ý vào những lỗi nhỏ đó.
+                -LƯU Ý. **Có số chổ là do cách phát âm & những từ đồng nghĩa làm cho khi dịch câu trở nên sai các phương pháp về từ như sai logic ,sai ngữ pháp , sai cách dùng từ .Bạn hãy xem và chỉnh sữa những điểm đó lại bằng trí tuệ của bạn.Không cần phải chú thích gì cả 
+        
+                Kết quả dịch (giữ nguyên định dạng thay thế văn bản gốc bằng văn bản đã dịch không thêm gì khác):
+                """
+            )            
             for name_model in ['gemini-2.0-flash']:
                 try:
                     response = client.models.generate_content(
@@ -1048,6 +1057,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
