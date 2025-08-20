@@ -180,7 +180,7 @@ def transcript_video(audio_file_path, checkpoint_file, temp_dir, srt_subtitle_ou
             srt_path = os.path.join(srt_subtitle_output_path, srt_filename)
             cmd = (
                 f"whisper {audio} --model {MODEL} --output_format srt "
-                f"--language {source_language} --output_dir {srt_subtitle_output_path} --threads 10"
+                f"--language {source_language} --fp16 False --output_dir {srt_subtitle_output_path} --threads 10"
             )
             os.system(cmd)
             metadata_list.extend(filter_srt_detail(srt_path))
@@ -1057,6 +1057,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
