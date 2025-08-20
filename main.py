@@ -613,6 +613,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
         translate_with_gemini(api_keys, srt_files, target_language, output_sub_dir)
     
     for srt_path in glob.glob(os.path.join(output_sub_dir, '*.srt')):
+        print (srt_path)
         metadata_list.extend(filter_srt_detail(srt_path))
     
     save_checkpoint(translated_json_path, {"segments": metadata_list})
@@ -1047,6 +1048,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
