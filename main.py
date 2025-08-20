@@ -398,7 +398,7 @@ class GeminiTranslationManager:
             client = genai.Client(api_key=api_key)
             prompt = """..."""  # Your prompt here
             
-            for name_model in ['gemini-1.5-flash']:
+            for name_model in ['gemini-2.5-flash']:
                 try:
                     response = client.models.generate_content(
                         model=name_model,
@@ -1047,6 +1047,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
