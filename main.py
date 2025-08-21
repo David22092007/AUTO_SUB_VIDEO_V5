@@ -667,7 +667,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
             if type_tts == 'fpt':
                 with open('url_fpt_out_put_backurl.txt', 'r') as f:
                     list_url_fpt = f.readlines() 
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                with ThreadPoolExecutor(max_workers=10) as executor:
                     executor.map(thread_saving_video_fpt, list_url_fpt)          
         # Kết hợp metadata từ các kết quả
         new_metadata = []
