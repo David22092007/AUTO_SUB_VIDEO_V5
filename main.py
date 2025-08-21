@@ -576,6 +576,7 @@ def fpt_tts(text, output_path, duration_ms, api_key, speed, voice_name='banmai')
         'voice': voice_name
     }
     response = requests.post(url, data=text.encode('utf-8'), headers=headers)
+    print (response.text)
     if response.status_code == 200:
         url = json.loads(response.text)['async']
         with open ('url_fpt_out_put_backurl.txt','a') as f:
@@ -612,6 +613,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
     
     print("Step 2: Translating text to Vietnamese...")
     subed_srt_path = glob.glob(os.path.join(output_sub_dir, '*.srt'))
+    
     srt_files = glob.glob(os.path.join('srt', '*.srt'))
     metadata_list = []
     
@@ -630,16 +632,14 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
     
     if full_option:
         print("Step 3: Generating TTS files for segments...")
-        checkpoint = load_checkpoint(translated_json_path)
+        checkpoint = load_checkpoint(translated_json_path);checkpoint_dub=[]        
         metadata_list = checkpoint["segments"]
-        list_start_time_complete = []
-        
+        list_start_time_complete = []        
         if os.path.exists(checkpoint_dub_file):
-            list_start_time_complete = [i['start_time'] for i in metadata_list if i['status'] == 'completed']
-        
+            checkpoint_dub=load_checkpoint(checkpoint_dub_file)['segments']
+            list_start_time_complete = [i['start_time'] for i in checkpoint_dub if i['status'] == 'completed']        
         metadata_list = [i for i in metadata_list if i['start_time'] not in list_start_time_complete]
         max_workers = min(os.cpu_count() or 2, 2)
-        
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_segment = {
                 executor.submit(
@@ -654,23 +654,32 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
                 ): segment
                 for segment in metadata_list
             }
-        if type_tts == 'fpt':
-            with open ('url_fpt_out_put_backurl.txt','a') as f:
-                list_url_fpt=f.readlines();f.close()
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            executor.map(thread_saving_video_fpt, list_url_fpt)
-        metadata_list = []
+
+        # Đọc danh sách URL nếu sử dụng type_tts là 'fpt'
+        if len(metadata_list)!=0:
+            if type_tts == 'fpt':
+                with open('url_fpt_out_put_backurl.txt', 'r') as f:
+                    list_url_fpt = f.readlines()
+                time.sleep(120)
+                # Xử lý các video FPT song song
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    executor.map(thread_saving_video_fpt, list_url_fpt)
+        # Kết hợp metadata từ các kết quả
+        new_metadata = []
         for future in as_completed(future_to_segment):
             segment = future_to_segment[future]
             try:
                 metadata = future.result()
                 if metadata:
-                    metadata_list.append(metadata)
-                    save_checkpoint(checkpoint_dub_file, {"segments": metadata_list})
+                    new_metadata.append(metadata)
             except Exception as e:
-                logging.error(f"TTS generation error: {e}")
-                print(f"TTS generation error: {e}")
+                print(f"Error processing segment: {e}")
+        
+        # Kết hợp metadata mới với dữ liệu cũ
+        new_metadata.extend(checkpoint_dub)
 
+        # Lưu lại kết quả vào file checkpoint
+        save_checkpoint(checkpoint_dub_file, {"segments": new_metadata})
 def upload_to_youtube(file_path, title, description, category, keywords, privacy_status):
     if not os.path.exists(CLIENT_SECRETS_FILE):
         raise FileNotFoundError(f"'{CLIENT_SECRETS_FILE}' not found. Download OAuth 2.0 Client JSON from Google Cloud Console.")
@@ -1032,7 +1041,7 @@ if __name__ == "__main__":
             cmd = [
                 "ffmpeg",
                 "-i", final_video_path,
-                "-vf", f"subtitles={subtitle_file}:force_style='FontName=Segoe UI Black,FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
+                "-vf", f"subtitles={subtitle_file}:force_style='FontName=Liberation Sans,FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
                 "-c:v", "libx264",  # Bộ mã hóa H.264
                 "-crf", "28",       # Chất lượng (18-28 là tốt, cao hơn = nhỏ hơn)
                 "-preset", "slow",  # Tốt hơn 'ultrafast' để nén tốt hơn
@@ -1041,7 +1050,8 @@ if __name__ == "__main__":
                 "-c:a", "aac",      # Mã hóa lại audio sang AAC
                 "-b:a", "128k",     # Bitrate audio
                 "-threads", "0",    # Tự động chọn số luồng
-                "-f", "mp4",       # Định dạng đầu ra
+                "-f", "mp4",        # Định dạng đầu ra
+                "-y",
                 output_video
             ]
             # Chạy lệnh và hiển thị log
@@ -1054,20 +1064,9 @@ if __name__ == "__main__":
             CHANNEL_ID = "1407577955873460254"
             contents=upload_tempfiles(output_video)
             sending(discord_bot_token,CHANNEL_ID,contents)  
-            a=input('ĐỢI BẠN DUYỆT XEM ĐÃ THÀNH CÔNG CHƯA NÈ')
         except Exception as e:
-            print (e)    
-        a=input('CODE GIỜ CHUYỂN ĐẾN XOÁ FILE NHÉ NẾU OKE THÌ TRIỂN')  
+            None   
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos')      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
-
-
-
-
-
-
-
-
