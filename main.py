@@ -839,17 +839,6 @@ def convert_detail(segments, srt_content, counter):
                 current_start = current_end
                 counter += 1
     return srt_content
-
-def upload_tempfiles(file_path):
-    url = "https://tmpfiles.org/api/v1/upload"
-    with open(file_path, 'rb') as f:
-        files = {'file': f}
-        response = requests.post(url, files=files)
-    
-    if response.status_code == 200:
-        data = response.json()
-        return data['data']['url']
-    return None
 def split_message(message, max_length=2000):
     return [message[i:i+max_length] for i in range(0, len(message), max_length)]
 def sending(BOT_TOKEN,CHANNEL_ID,contents):
@@ -873,7 +862,8 @@ if __name__ == "__main__":
     lauching_file_path = 'running_id_video.txt'
     srt_content = ""
     counter = 1
-    discord_bot_token='MTQwNzM2NzM1OTYwNTM3NDk5Nw.GKh8Yj.dy6XnsHyKEgwQWtuuyX_J5QppXHKJ-CPrs5Qlk'
+    BOT_TOKEN = "8375989233:AAHrckOR07fxa0G0gUbmcs47RaaLfcSVDkg"
+    CHAT_ID = "7531993744"
     # Các hằng số cho YouTube API
     RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
     SCOPES = "https://www.googleapis.com/auth/youtube.upload"
@@ -1041,7 +1031,7 @@ if __name__ == "__main__":
             cmd = [
                 "ffmpeg",
                 "-i", final_video_path,
-                "-vf", f"subtitles={subtitle_file}:force_style='FontName=Liberation Sans,FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
+                "-vf", f"subtitles={subtitle_file}:force_style='FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
                 "-c:v", "libx264",  # Bộ mã hóa H.264
                 "-crf", "28",       # Chất lượng (18-28 là tốt, cao hơn = nhỏ hơn)
                 "-preset", "slow",  # Tốt hơn 'ultrafast' để nén tốt hơn
@@ -1061,12 +1051,36 @@ if __name__ == "__main__":
             except subprocess.CalledProcessError as e:
                 print("❌ Lỗi khi chạy FFmpeg:", e)              
         try:
-            CHANNEL_ID = "1407577955873460254"
-            contents=upload_tempfiles(output_video)
-            sending(discord_bot_token,CHANNEL_ID,contents)  
+            while True:
+                with open(video_path, 'rb') as video_file:
+                    # Tạo dictionary cho dữ liệu và files
+                    files = {
+                        "video": output_video # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                    }
+                    data = {
+                        "chat_id": CHAT_ID,
+                        "caption": name_video # Chú thích (không bắt buộc)
+                    }
+
+                    # Gọi API sendVideo
+                    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
+                    response = requests.post(url, data=data, files=files)
+
+                if response.status_code==200:
+                    break
         except Exception as e:
-            None   
+            None
+        a=input('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!POLICE!!!!!!!!!!!!!!!!!!!!!!')    
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos')      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
+
+
+
+
+
+
+
+
