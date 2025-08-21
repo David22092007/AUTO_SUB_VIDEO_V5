@@ -290,179 +290,79 @@ def extract_transcript(input_video_path, output_dir, output_json_path, source_la
     except Exception as e:
         logging.error(f"Processing error: {e}")
         print(f"Processing error: {e}")
-#-------------------------------------------------
-class GeminiTranslationManager:
-    def __init__(self, api_keys, segment_groups, target_language, output_sub_dir):
-        self.api_keys = api_keys.copy()
-        self.segment_groups = segment_groups
-        self.target_language = target_language
-        self.output_sub_dir = output_sub_dir
-        self.available_keys = Queue()
-        self.used_keys = set()
-        self.failed_keys = set()
-        self.translated_file_paths = []
-        
-        # Khởi tạo queue với tất cả API keys
-        for key in api_keys:
-            self.available_keys.put(key)
-    
-    def get_available_key(self):
-        """Lấy API key khả dụng, ưu tiên key chưa dùng"""
-        # Ưu tiên key chưa dùng
-        unused_keys = [key for key in self.api_keys if key not in self.used_keys]
-        if unused_keys:
-            return unused_keys[0]
-        
-        # Nếu không có key chưa dùng, lấy từ queue
-        if not self.available_keys.empty():
-            return self.available_keys.get()
-        
-        # Nếu tất cả key đều bị lỗi, raise exception
-        if len(self.failed_keys) == len(self.api_keys):
-            raise Exception("All API keys have failed")
-        
-        return None
+def translated_with_gemini(api_key,srt_content):
+    global script_letter
+    client = genai.Client(api_key=api_key)
+    prompt = (
+        """
+        -Bạn là một công cụ dịch thuật. Nhiệm vụ của bạn là:
+        -1. **Không được giữ lại bất kỳ ký tự gốc nào của văn bản gốc (ví dụ tiếng Trung, tiếng Anh...) trong kết quả.**
+        -2. **Một số tên được dịch không hay bạn có thể biến tên nhân vật theo phong cách Trung Hoa cổ trang, sử dụng cấu trúc "Tiểu + [Tên Nhân Vật]" . Mỗi tên cần thể hiện tính cách, ngoại hình, hoặc vai trò của nhân vật.
+        -3. **Tôi nhấn mạnh lại một điểm phải giữ nguyên định dạng gốc . Ví dụ về một lỗi mà bạn thường sai  00:01 nhưng phải điền là 00:00:01,000 .Hãy chú ý vào những lỗi nhỏ đó.
+        -LƯU Ý. **Có số chổ là do cách phát âm & những từ đồng nghĩa làm cho khi dịch câu trở nên sai các phương pháp về từ như sai logic ,sai ngữ pháp , sai cách dùng từ .Bạn hãy xem và chỉnh sữa những điểm đó lại bằng trí tuệ của bạn.Không cần phải chú thích gì cả 
 
-    def mark_key_success(self, api_key):
-        """Đánh dấu key sử dụng thành công"""
-        self.used_keys.add(api_key)
-        if api_key not in self.failed_keys:
-            self.available_keys.put(api_key)
+        Kết quả dịch (giữ nguyên định dạng thay thế văn bản gốc bằng văn bản đã dịch không thêm gì khác):
+        """
+    )
 
-    def mark_key_failed(self, api_key):
-        """Đánh dấu key bị lỗi"""
-        self.failed_keys.add(api_key)
-        logging.warning(f"API key failed: {api_key[:10]}...")
-
-    def translate_segment_with_retry(self, segment):
-        """Dịch một segment với cơ chế retry tự động"""
-        max_retries = 3
-        retry_delay = 2  # seconds
-        
-        for attempt in range(max_retries):
-            api_key = self.get_available_key()
-            if api_key is None:
-                logging.error("No available API keys")
-                return None
-            
+    while True:
+        for name_model in ['gemini-1.5-flash','gemini-2.0-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite']:
             try:
-                result = self.translate_segment(segment, api_key)
-                if result is not None:
-                    self.mark_key_success(api_key)
-                    return result
-                else:
-                    self.mark_key_failed(api_key)
-                    
-            except Exception as e:
-                logging.error(f"Attempt {attempt + 1} failed for {segment}: {str(e)}")
-                self.mark_key_failed(api_key)
-                time.sleep(retry_delay * (attempt + 1))
-        
-        logging.error(f"Failed to translate {segment} after {max_retries} attempts")
-        return None
-
-    def translate_segment(self, segment, api_key):
-        """Dịch một segment cụ thể"""
-        try:
-            with open(segment, "r", encoding="utf-8") as file:
-                srt_content = file.read()
-            
-            response = self.translated_with_gemini(api_key, srt_content)
-            
-            if response is None or not hasattr(response, 'text') or response.text is None:
-                return None
-            
-            # Tạo tên file output
-            base_name = os.path.basename(segment)
-            try:
-                segment_number = base_name.split('_')[1]
-            except IndexError:
-                segment_number = base_name.split('.')[0]
-            
-            file_name = f'segment_{segment_number}'
-            final_sup_text_path = os.path.join(self.output_sub_dir, file_name)
-            
-            # Ghi file
-            with open(final_sup_text_path, 'w', encoding="utf-8") as f:
-                f.write(response.text)
-            
-            return final_sup_text_path
-            
-        except Exception as e:
-            logging.error(f"Error translating segment {segment}: {str(e)}")
-            return None
-
-    def translated_with_gemini(self, api_key, srt_content):
-        """Gọi API Gemini để dịch"""
-        try:
-            client = genai.Client(api_key=api_key)
-            prompt = (
-                """
-                -Bạn là một công cụ dịch thuật. Nhiệm vụ của bạn là:
-                -1. **Không được giữ lại bất kỳ ký tự gốc nào của văn bản gốc (ví dụ tiếng Trung, tiếng Anh...) trong kết quả.**
-                -2. **Một số tên được dịch không hay bạn có thể biến tên nhân vật theo phong cách Trung Hoa cổ trang, sử dụng cấu trúc "Tiểu + [Tên Nhân Vật]" . Mỗi tên cần thể hiện tính cách, ngoại hình, hoặc vai trò của nhân vật.
-                -3. **Tôi nhấn mạnh lại một điểm phải giữ nguyên định dạng gốc . Ví dụ về một lỗi mà bạn thường sai  00:01 nhưng phải điền là 00:00:01,000 .Hãy chú ý vào những lỗi nhỏ đó.
-                -LƯU Ý. **Có số chổ là do cách phát âm & những từ đồng nghĩa làm cho khi dịch câu trở nên sai các phương pháp về từ như sai logic ,sai ngữ pháp , sai cách dùng từ .Bạn hãy xem và chỉnh sữa những điểm đó lại bằng trí tuệ của bạn.Không cần phải chú thích gì cả 
-        
-                Kết quả dịch (giữ nguyên định dạng thay thế văn bản gốc bằng văn bản đã dịch không thêm gì khác):
-                """
-            )            
-            for name_model in ['gemini-2.0-flash']:
-                try:
-                    response = client.models.generate_content(
-                        model=name_model,
-                        contents=[srt_content, prompt]
-                    )
-                    if response.text is not None:
-                        return response
-                except Exception as e:
-                    logging.warning(f"Model {name_model} failed: {str(e)}")
-                    continue
-            
-            return None
-            
-        except Exception as e:
-            logging.error(f"Gemini API call failed: {str(e)}")
-            return None
-
-    def run_translation(self):
-        """Chạy dịch thuật với quản lý API keys thông minh"""
-        logging.info(f"Starting translation with {len(self.api_keys)} API keys for {len(self.segment_groups)} segments")
-        
-        # Số luồng tối đa bằng số segment groups
-        max_workers = min(len(self.segment_groups), 20)  # Giới hạn 20 luồng để tránh quá tải
-        
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Gửi tất cả tasks
-            future_to_segment = {
-                executor.submit(self.translate_segment_with_retry, segment): segment 
-                for segment in self.segment_groups
-            }
-            
-            # Xử lý kết quả
-            for future in as_completed(future_to_segment):
-                segment = future_to_segment[future]
-                try:
-                    result = future.result()
-                    if result:
-                        self.translated_file_paths.append(result)
-                        logging.info(f"Successfully translated: {segment}")
-                    else:
-                        logging.error(f"Failed to translate: {segment}")
-                except Exception as e:
-                    logging.error(f"Exception occurred for {segment}: {str(e)}")
-        
-        logging.info(f"Translation completed. Success: {len(self.translated_file_paths)}/{len(self.segment_groups)}")
-        return self.translated_file_paths
+                response = client.models.generate_content(
+                    model=name_model,
+                    contents=[srt_content, prompt]
+                )
+                if response.text!=None:
+                    return response
+            except:
+                continue
+def translate_segment(segment, api_key, output_dir, translated_file_path):    
+    global script_letter
+    with open(segment, "r", encoding="utf-8") as file:
+      srt_content = file.read()
+    response=translated_with_gemini(api_key,srt_content)
+    file_name='segment_'+str(segment.split('_')[1])
+    final_sup_text_path = str(output_dir)+'/'+str(file_name) 
+    with open (final_sup_text_path, 'w', encoding="utf-8") as f:
+        f.write((response.text));f.close()
+    translated_file_path.append(final_sup_text_path)
+    return
 def translate_with_gemini(api_keys, segment_groups, target_language, output_sub_dir):
-    """Function chính để gọi từ bên ngoài"""
-    try:
-        manager = GeminiTranslationManager(api_keys, segment_groups, target_language, output_sub_dir)
-        return manager.run_translation()
-    except Exception as e:
-        logging.error(f"Translation failed: {str(e)}")
-        return []
-#-------------------------------------------------
+    logging.info(f"Bắt đầu dịch văn bản bằng Google Gemini với {len(api_keys)} API key...")
+    print(f"Bắt đầu dịch văn bản bằng Google Gemini với {len(api_keys)} API key...")
+    if not api_keys:
+        raise ValueError("Danh sách API keys không được trống.")
+    if len(api_keys) >= len(segment_groups):
+        api_keys=api_keys[0:int(len(segment_groups)-1)]
+    translated_segments = [];translated_file_path = [];n = len(api_keys)
+    if n==0:
+        return
+    chunk_size = len(segment_groups) // n
+    segments_split = []
+    for i in range(n):
+        start = i * chunk_size
+        # Phần cuối cùng sẽ lấy tất cả segments còn lại
+        end = None if i == n - 1 else (i + 1) * chunk_size
+        segments_split.append(segment_groups[start:end])
+    
+    with ThreadPoolExecutor(max_workers=n) as executor:
+        # Gửi công việc dịch cho n luồng
+        futures = [
+            executor.submit(
+                lambda segments, key: [
+                    translate_segment(seg, key, output_sub_dir, translated_file_path) for seg in segments
+                ], segments, api_keys[i]
+            )
+            for i, segments in enumerate(segments_split)
+        ]
+        
+        # Thu thập kết quả từ các luồng
+        for future in as_completed(futures):
+            translated_segments.extend(future.result())
+    
+    logging.info("Dịch văn bản hoàn tất.")
+    print("Dịch văn bản hoàn tất.")
+    return translated_file_path   
 
 def speed_up_video(input_video_path, speed, output_dir):
     subprocess.run([
@@ -482,7 +382,7 @@ def get_duration(input_path):
     ]
     return float(subprocess.check_output(cmd))
 
-def process_segment_dubbing(start_time, end_time, segment_index, translated_text, target_language, temp_dir, translate_mode):
+def process_segment_dubbing(start_time, end_time, segment_index, translated_text, target_language, temp_dir, api_keys, translate_mode):
     os.makedirs(temp_dir, exist_ok=True)
     duration_ms = ((float(end_time) - float(start_time)) * 1000)
     final_audio_path = os.path.join(temp_dir, f"tts_{start_time}.mp3")
@@ -495,8 +395,8 @@ def process_segment_dubbing(start_time, end_time, segment_index, translated_text
                     asyncio.run(text_api_to_speech(translated_text, final_audio_path, duration_ms))
                 except Exception as e:
                     logging.error(f"Edge TTS error: {e}")
-            elif translate_mode == 'fpt':
-                fpt_tts(translated_text, final_audio_path, duration_ms/1000, api_key='GJnZ1TOhqqxhrDHBF2L8ypTz7rUEi23x', speed='1')
+            elif translate_mode == 'fpt':                
+                fpt_tts(translated_text, final_audio_path, duration_ms/1000,  api_keys, speed='1')
         else:
             AudioSegment.silent(duration=duration_ms).export(final_audio_path, format="mp3")
         
@@ -568,19 +468,21 @@ async def text_api_to_speech(translated_text, output_path, duration_ms, gender='
     pitch = "-0Hz"
     await generate_tts_with_pitch_and_rate(pitch, output_path, translated_text, voice, duration_ms/1000)
 
-def fpt_tts(text, output_path, duration_ms, api_key, speed, voice_name='banmai'):
-    url = 'https://api.fpt.ai/hmi/tts/v5'    
-    headers = {
-        'api-key': api_key,
-        'speed': speed,
-        'voice': voice_name
-    }
-    response = requests.post(url, data=text.encode('utf-8'), headers=headers)
-    print (response.text)
-    if response.status_code == 200:
-        url = json.loads(response.text)['async']
-        with open ('url_fpt_out_put_backurl.txt','a') as f:
-            f.write(output_path+'_'+url+'_'+str(duration_ms)+'\n');f.close()
+def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'):
+    while True:
+        for api_key in api_keys:
+            url = 'https://api.fpt.ai/hmi/tts/v5'    
+            headers = {
+                'api-key': api_key,
+                'speed': speed,
+                'voice': voice_name
+            }
+            response = requests.post(url, data=text.encode('utf-8'), headers=headers)          
+            if response.status_code == 200:
+                url = json.loads(response.text)['async']
+                with open ('url_fpt_out_put_backurl.txt','a') as f:
+                    f.write(output_path+'_'+url+'_'+str(duration_ms)+'\n');f.close()
+                    return
 def thread_saving_video_fpt(detail):
     output_path,url,duration_ms=detail.split('_');out_put_base = output_path.replace('/tts', '/tts_base')
     response = requests.get(url, stream=True)
@@ -600,7 +502,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
     checkpoint_dub_file = f"checkpoint_dub_{os.path.basename(input_video_path)}.json"
     output_json_path = os.path.join(output_dir, "transcript.json")
     translated_json_path = os.path.join(output_dir, "translated_transcript.json")
-    
+    api_keys=['n9rKtRYQWtT39nCBil4o9JsQsvZEyRDP','GJnZ1TOhqqxhrDHBF2L8ypTz7rUEi23x']
     setup_directories(temp_dir)
     setup_directories(output_dir)
     setup_directories(output_sub_dir)
@@ -629,7 +531,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
     save_checkpoint(translated_json_path, {"segments": metadata_list})
     logging.info(f"Translated transcript saved to: {translated_json_path}")
     print(f"Successfully translated from {source_language} to {target_language}")
-    
+    a=input('SUB XONG RỒI KÌA ----?????')
     if full_option:
         print("Step 3: Generating TTS files for segments...")
         checkpoint = load_checkpoint(translated_json_path);checkpoint_dub=[]        
@@ -650,17 +552,17 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
                     segment["text"],
                     target_language,
                     tts_forder_save_path,
+                    api_keys,
                     type_tts
                 ): segment
                 for segment in metadata_list
             }
-
         # Đọc danh sách URL nếu sử dụng type_tts là 'fpt'
         if len(metadata_list)!=0:
             if type_tts == 'fpt':
                 with open('url_fpt_out_put_backurl.txt', 'r') as f:
-                    list_url_fpt = f.readlines()
-                time.sleep(120)
+                    list_url_fpt = f.readlines()   
+                time.sleep(600)
                 # Xử lý các video FPT song song
                 with ThreadPoolExecutor(max_workers=max_workers) as executor:
                     executor.map(thread_saving_video_fpt, list_url_fpt)
@@ -946,6 +848,7 @@ if __name__ == "__main__":
         
         # Bắt đầu quá trình lồng tiếng
         dub_movie(input_video, output_dir, api_keys, source_language, target_language, full_option)
+        a=input('WAIT--')
         with open(os.path.join('dubbed_movie', 'translated_transcript.json'), 'r', encoding='utf-8') as file:
             segments = json.load(file)['segments'];file.close()            
         srt_content = convert_detail(segments, srt_content, counter)
@@ -1023,7 +926,7 @@ if __name__ == "__main__":
             print("Lỗi: Không tìm thấy ffmpeg. Hãy đảm bảo ffmpeg đã được cài đặt và thêm vào PATH.")
 
         increase_audio_volume(output_path_voice_compare, final_video_path, volume_factor=1.5)
-        if True:    
+        if False:    
             subtitle_file = srt_path
             # File đầu ra
             output_video = os.path.join("Videos", f"subed_{target_id_video_bil}_video.mp4")
@@ -1031,7 +934,7 @@ if __name__ == "__main__":
             cmd = [
                 "ffmpeg",
                 "-i", final_video_path,
-                "-vf", f"subtitles={subtitle_file}:force_style='FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
+                "-vf", f"subtitles={subtitle_file}:force_style='FontName=STIXNonUnicode,FontSize=12,PrimaryColour=&H00FFFF&,Outline=2,Shadow=1'",
                 "-c:v", "libx264",  # Bộ mã hóa H.264
                 "-crf", "28",       # Chất lượng (18-28 là tốt, cao hơn = nhỏ hơn)
                 "-preset", "slow",  # Tốt hơn 'ultrafast' để nén tốt hơn
@@ -1055,7 +958,7 @@ if __name__ == "__main__":
                 with open(video_path, 'rb') as video_file:
                     # Tạo dictionary cho dữ liệu và files
                     files = {
-                        "video": output_video # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                        "video": final_video_path # Khóa 'video' là bắt buộc cho phương thức sendVideo
                     }
                     data = {
                         "chat_id": CHAT_ID,
