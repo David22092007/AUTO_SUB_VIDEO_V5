@@ -1024,7 +1024,7 @@ if __name__ == "__main__":
             print("Lỗi: Không tìm thấy ffmpeg. Hãy đảm bảo ffmpeg đã được cài đặt và thêm vào PATH.")
 
         increase_audio_volume(output_path_voice_compare, final_video_path, volume_factor=1.5)
-        if False:    
+        if True:    
             subtitle_file = srt_path
             # File đầu ra
             output_video = os.path.join("Videos", f"subed_{target_id_video_bil}_video.mp4")
@@ -1052,7 +1052,7 @@ if __name__ == "__main__":
                 print("❌ Lỗi khi chạy FFmpeg:", e)              
         try:
             CHANNEL_ID = "1407577955873460254"
-            contents=upload_tempfiles(final_video_path)
+            contents=upload_tempfiles(output_video)
             sending(discord_bot_token,CHANNEL_ID,contents)  
             a=input('ĐỢI BẠN DUYỆT XEM ĐÃ THÀNH CÔNG CHƯA NÈ')
         except Exception as e:
