@@ -1074,9 +1074,8 @@ if __name__ == "__main__":
                 if response.status_code==200:
                     break
         except Exception as e:
-            None
-        a=input('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!POLICE!!!!!!!!!!!!!!!!!!!!!!')    
-        remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos')      
+            None  
+        remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos');remove_file("url_fpt_out_put_backurl.txt")      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
