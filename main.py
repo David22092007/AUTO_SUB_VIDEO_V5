@@ -569,8 +569,7 @@ async def text_api_to_speech(translated_text, output_path, duration_ms, gender='
     await generate_tts_with_pitch_and_rate(pitch, output_path, translated_text, voice, duration_ms/1000)
 
 def fpt_tts(text, output_path, duration_ms, api_key, speed, voice_name='banmai'):
-    url = 'https://api.fpt.ai/hmi/tts/v5'
-    out_put_base = output_path.replace('/tts', '/tts_base')
+    url = 'https://api.fpt.ai/hmi/tts/v5'    
     headers = {
         'api-key': api_key,
         'speed': speed,
@@ -579,17 +578,18 @@ def fpt_tts(text, output_path, duration_ms, api_key, speed, voice_name='banmai')
     response = requests.post(url, data=text.encode('utf-8'), headers=headers)
     if response.status_code == 200:
         url = json.loads(response.text)['async']
-        response = requests.get(url, stream=True)
-        for i in range(10):
-            if response.status_code == 200:
-                with open(out_put_base, 'wb') as f:
-                    for chunk in response.iter_content(1024):
-                        f.write(chunk)
-                duration_timeslap = get_duration(out_put_base)
-                speed_up_video(out_put_base, max(1, min(1.5, float(duration_timeslap) / float(duration_ms))), output_path)
-                return
-
-def dub_movie(input_video_path, output_dir, api_keys, source_language, target_language, full_option):
+        with open ('url_fpt_out_put_backurl.txt','a') as f:
+            f.write(output_path+'_'+url+'_'+str(duration_ms)+'\n');f.close()
+def thread_saving_video_fpt(detail):
+    output_path,url,duration_ms=detail.split('_');out_put_base = output_path.replace('/tts', '/tts_base')
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        with open(out_put_base, 'wb') as f:
+            for chunk in response.iter_content(1024):
+                f.write(chunk)
+        duration_timeslap = get_duration(out_put_base);speed_up_video(out_put_base, max(1, min(1.5, float(duration_timeslap) / float(duration_ms))), output_path)
+        return
+def dub_movie(input_video_path, output_dir, api_keys, source_language, target_language, full_option,type_tts='fpt'):
     temp_dir = "temp_segments"
     metadata_list = []
     output_sub_dir = "sub"
@@ -622,7 +622,6 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
         translate_with_gemini(api_keys, srt_files, target_language, output_sub_dir)
     
     for srt_path in glob.glob(os.path.join(output_sub_dir, '*.srt')):
-        print (srt_path)
         metadata_list.extend(filter_srt_detail(srt_path))
     
     save_checkpoint(translated_json_path, {"segments": metadata_list})
@@ -636,7 +635,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
         list_start_time_complete = []
         
         if os.path.exists(checkpoint_dub_file):
-            list_start_time_complete = [i['start_time'] for i in load_checkpoint(translated_json_path)['segments'] if i['status'] == 'completed']
+            list_start_time_complete = [i['start_time'] for i in metadata_list if i['status'] == 'completed']
         
         metadata_list = [i for i in metadata_list if i['start_time'] not in list_start_time_complete]
         max_workers = min(os.cpu_count() or 2, 2)
@@ -651,11 +650,15 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
                     segment["text"],
                     target_language,
                     tts_forder_save_path,
-                    'fpt'
+                    type_tts
                 ): segment
                 for segment in metadata_list
             }
-        
+        if type_tts == 'fpt':
+            with open ('url_fpt_out_put_backurl.txt','a') as f:
+                list_url_fpt=f.readlines();f.close()
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            executor.map(thread_saving_video_fpt, list_url_fpt)
         metadata_list = []
         for future in as_completed(future_to_segment):
             segment = future_to_segment[future]
@@ -850,6 +853,7 @@ def sending(BOT_TOKEN,CHANNEL_ID,contents):
     url = f"https://discordapp.com/api/v8/channels/{CHANNEL_ID}/messages"
 
     response = requests.post(url, headers=headers, data=data)
+    print (response.text)
 if __name__ == "__main__":
     # Cấu hình biến toàn cục
     select_options = '123'
@@ -860,7 +864,7 @@ if __name__ == "__main__":
     lauching_file_path = 'running_id_video.txt'
     srt_content = ""
     counter = 1
-    discord_bot_token='MTQwNzM2NzM1OTYwNTM3NDk5Nw.GAtPnx.x_AYr29XGbvJaDnLIzmdGZLGQjjkwhJ69mQCD4'
+    discord_bot_token='MTQwNzM2NzM1OTYwNTM3NDk5Nw.GKh8Yj.dy6XnsHyKEgwQWtuuyX_J5QppXHKJ-CPrs5Qlk'
     # Các hằng số cho YouTube API
     RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
     SCOPES = "https://www.googleapis.com/auth/youtube.upload"
@@ -955,7 +959,6 @@ if __name__ == "__main__":
         with open(f"checkpoint_dub_{os.path.basename(input_video)}.json", 'r', encoding='utf-8') as file:
             data = [o for o in json.load(file)['segments'] if o != None]
             file.close()
-
         # Tạo danh sách các input audio và thời gian bắt đầu
         audio_inputs = []
         for segment in data:
@@ -1050,7 +1053,6 @@ if __name__ == "__main__":
         try:
             CHANNEL_ID = "1407577955873460254"
             contents=upload_tempfiles(final_video_path)
-            print (contents)
             sending(discord_bot_token,CHANNEL_ID,contents)  
             a=input('ĐỢI BẠN DUYỆT XEM ĐÃ THÀNH CÔNG CHƯA NÈ')
         except Exception as e:
