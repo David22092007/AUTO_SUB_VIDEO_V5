@@ -569,6 +569,8 @@ async def text_api_to_speech(translated_text, output_path, duration_ms, gender='
     await generate_tts_with_pitch_and_rate(pitch, output_path, translated_text, voice, duration_ms/1000)
 
 def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'):
+    if len(text) <3:
+        text = str(text)+' !'
     while True:
         for api_key in api_keys:
             url = 'https://api.fpt.ai/hmi/tts/v5'    
@@ -577,7 +579,7 @@ def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'
                 'speed': speed,
                 'voice': voice_name
             }
-            response = requests.post(url, data=text.encode('utf-8'), headers=headers)   
+            response = requests.post(url, data=text.encode('utf-8'), headers=headers)
             print (response.text)
             if response.status_code == 200:
                 url = json.loads(response.text)['async']
@@ -1089,4 +1091,3 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
