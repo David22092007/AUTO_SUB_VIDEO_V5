@@ -577,8 +577,7 @@ def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'
                 'speed': speed,
                 'voice': voice_name
             }
-            response = requests.post(url, data=text.encode('utf-8'), headers=headers)
-            print (response.text)            
+            response = requests.post(url, data=text.encode('utf-8'), headers=headers)         
             if response.status_code == 200:
                 url = json.loads(response.text)['async']
                 with open ('url_fpt_out_put_backurl.txt','a') as f:
@@ -593,7 +592,7 @@ def thread_saving_video_fpt(detail):
             with open(out_put_base, 'wb') as f:
                 for chunk in response.iter_content(1024):
                     f.write(chunk)
-            duration_timeslap = get_duration(out_put_base);speed_up_video(out_put_base, max(1, min(1.5, float(duration_timeslap) / float(duration_ms))), output_path)
+            duration_timeslap = get_duration(out_put_base);speed_up_video(out_put_base, max(1, min(1.3, float(duration_timeslap) / float(duration_ms))), output_path)
             return
         else:
             continue
@@ -1055,26 +1054,36 @@ if __name__ == "__main__":
                 print("✅ Hoàn tất! Video đã được chèn phụ đề.")
             except subprocess.CalledProcessError as e:
                 print("❌ Lỗi khi chạy FFmpeg:", e)              
-        try:
-            while True:
-                with open(video_path, 'rb') as video_file:
+        while True:
+            with open(final_video_path, 'rb') as video_file:
+                # Tạo dictionary cho dữ liệu và files
+                files = {
+                    "video": video_file # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                }
+                data = {
+                    "chat_id": CHAT_ID,
+                    "caption": name_video # Chú thích (không bắt buộc)
+                }
+
+                # Gọi API sendVideo
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
+                response = requests.post(url, data=data, files=files)
+            if response.status_code==200:
+                with open(srt_path, 'rb') as file_path_txt:
                     # Tạo dictionary cho dữ liệu và files
                     files = {
-                        "video": final_video_path # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                        "video": file_path_txt # Khóa 'video' là bắt buộc cho phương thức sendVideo
                     }
                     data = {
                         "chat_id": CHAT_ID,
-                        "caption": name_video # Chú thích (không bắt buộc)
+                        "caption": 'SRT : '+name_video # Chú thích (không bắt buộc)
                     }
 
                     # Gọi API sendVideo
                     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
                     response = requests.post(url, data=data, files=files)
-
                 if response.status_code==200:
-                    break
-        except Exception as e:
-            None  
+                    break 
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos');remove_file("url_fpt_out_put_backurl.txt")      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
