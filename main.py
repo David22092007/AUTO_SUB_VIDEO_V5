@@ -577,7 +577,8 @@ def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'
                 'speed': speed,
                 'voice': voice_name
             }
-            response = requests.post(url, data=text.encode('utf-8'), headers=headers)         
+            response = requests.post(url, data=text.encode('utf-8'), headers=headers)   
+            print (response.text)
             if response.status_code == 200:
                 url = json.loads(response.text)['async']
                 with open ('url_fpt_out_put_backurl.txt','a') as f:
@@ -1088,3 +1089,4 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
