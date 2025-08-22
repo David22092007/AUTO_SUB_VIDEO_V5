@@ -159,14 +159,17 @@ def filter_srt_detail(srt_path):
             detail = lines[i].split(' --> ')
             start_time, end_time = detail[0], detail[1]
             offset_sec = int(os.path.basename(srt_path).split('_')[1].split('.')[0])
-            metadata = {
-                "start_time": str(srt_time_to_seconds(start_time) + offset_sec),
-                "end_time": str(srt_time_to_seconds(end_time) + offset_sec),
-                "text": lines[i+1].replace('\n',''),
-                "speed_of_speech": "2007 WPM",
-                "status": "completed"
-            }
-            metadata_list.append(metadata)
+            try:
+                metadata = {
+                    "start_time": str(srt_time_to_seconds(start_time) + offset_sec),
+                    "end_time": str(srt_time_to_seconds(end_time) + offset_sec),
+                    "text": lines[i+1].replace('\n',''),
+                    "speed_of_speech": "2007 WPM",
+                    "status": "completed"
+                }
+                metadata_list.append(metadata)
+            except:
+                continue
         i += 1
     return metadata_list
 
@@ -659,7 +662,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
                     segment["text"],
                     target_language,
                     tts_forder_save_path,
-                    ['n9rKtRYQWtT39nCBil4o9JsQsvZEyRDP','WDJxtVTv3EOUbpeXWszOd6WkxWs9LGJQ'],
+                    ['n9rKtRYQWtT39nCBil4o9JsQsvZEyRDP','WDJxtVTv3EOUbpeXWszOd6WkxWs9LGJQ','pjLFlJzmN4yaYcZPHP2wwMMIx0Pn5lBh'],
                     type_tts
                 ): segment
                 for segment in metadata_list
@@ -687,106 +690,6 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
 
         # Lưu lại kết quả vào file checkpoint
         save_checkpoint(checkpoint_dub_file, {"segments": new_metadata})
-def upload_to_youtube(file_path, title, description, category, keywords, privacy_status):
-    if not os.path.exists(CLIENT_SECRETS_FILE):
-        raise FileNotFoundError(f"'{CLIENT_SECRETS_FILE}' not found. Download OAuth 2.0 Client JSON from Google Cloud Console.")
-
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-    credentials = None
-
-    if os.path.exists(TOKEN_FILE):
-        try:
-            credentials = google.oauth2.credentials.Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-            print("✅ Loaded credentials from token.json")
-        except Exception as e:
-            print(f"⚠ Error reading token.json: {e}")
-            credentials = None
-
-    if not credentials or not credentials.valid:
-        if credentials and credentials.expired and credentials.refresh_token:
-            try:
-                credentials.refresh(google.auth.transport.requests.Request())
-                print("🔄 Token refreshed successfully.")
-            except Exception as e:
-                print(f"⚠ Error refreshing token: {e}")
-                credentials = None
-
-        if not credentials or not credentials.valid:
-            print("🌐 Starting new authentication...")
-            flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
-                CLIENT_SECRETS_FILE, SCOPES)
-            try:
-                credentials = flow.run_local_server(port=8080, access_type='offline', prompt='consent')
-                print("✅ Login successful.")
-            except requests.exceptions.ConnectionError:
-                raise ConnectionError("Could not connect to Google server. Check network or firewall.")
-            except Exception as e:
-                raise RuntimeError(f"Unexpected authentication error: {e}")
-
-        with open(TOKEN_FILE, 'w') as token:
-            token.write(credentials.to_json())
-            print(f"💾 Saved credentials to {TOKEN_FILE}")
-
-    youtube = googleapiclient.discovery.build("youtube", "v3", credentials=credentials)
-
-    tags = keywords.split(",") if keywords else None
-    request_body = {
-        "snippet": {
-            "categoryId": category,
-            "title": title,
-            "description": description,
-            "tags": tags
-        },
-        "status": {
-            "privacyStatus": privacy_status
-        }
-    }
-
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Video file '{file_path}' not found.")
-
-    insert_request = youtube.videos().insert(
-        part="snippet,status",
-        body=request_body,
-        media_body=googleapiclient.http.MediaFileUpload(file_path, chunksize=-1, resumable=True)
-    )
-
-    print(f"🚀 Starting upload: {title}")
-    response = None
-    error = None
-    retry = 0
-
-    while response is None:
-        try:
-            status, response = insert_request.next_chunk()
-            if status:
-                print(f"📤 Progress: {int(status.progress() * 100)}%")
-
-            if response is not None:
-                if 'id' in response:
-                    print(f"✅ Upload successful! Video ID: {response['id']}")
-                else:
-                    raise RuntimeError(f"Upload failed. Response: {response}")
-        except googleapiclient.errors.HttpError as e:
-            if e.resp.status in RETRIABLE_STATUS_CODES:
-                error = f"Retriable HTTP error {e.resp.status}: {e.content}"
-            else:
-                raise
-        except RETRIABLE_EXCEPTIONS as e:
-            error = f"Retriable network error: {e}"
-        except Exception as e:
-            raise RuntimeError(f"Unexpected upload error: {e}")
-
-        if error:
-            print(error)
-            retry += 1
-            if retry > MAX_RETRIES:
-                raise RuntimeError("🚫 Exceeded maximum retry attempts.")
-            sleep_seconds = random.random() * (2 ** retry)
-            print(f"⏳ Waiting {sleep_seconds:.2f}s before retry...")
-            time.sleep(sleep_seconds)
-            error = None
-
 def increase_audio_volume(input_file, output_file, volume_factor, audio_quality=5):
     try:
         if not os.path.isfile(input_file):
@@ -846,8 +749,6 @@ def convert_detail(segments, srt_content, counter):
                 current_start = current_end
                 counter += 1
     return srt_content
-def split_message(message, max_length=2000):
-    return [message[i:i+max_length] for i in range(0, len(message), max_length)]
 def sending(BOT_TOKEN,CHANNEL_ID,contents):
     files={}
     data={}
