@@ -780,23 +780,16 @@ if __name__ == "__main__":
     RETRIABLE_EXCEPTIONS = (httplib.NotConnected, httplib.IncompleteRead, 
                            httplib.ImproperConnectionState, httplib.CannotSendRequest,
                            httplib.CannotSendHeader, httplib.ResponseNotReady,
-                           httplib.BadStatusLine, IOError)
-    
-    while True:
-        # Kiểm tra video đã hoàn thành
-        if os.path.exists(complete_json_path):
-            with open(complete_json_path, 'r', encoding='utf-8') as f:
-                check_point_id_video_completed = [value.strip() for value in f.readlines()]
-                name_video = f'[ TU TIÊN ] VÔ TÌNH THÔN PHỆ KẺ ĐỊCH TA ĐỘT PHÁ ĐẠI VIÊN MÃN - TẬP {len(check_point_id_video_completed)+1}'
-        else:
-            name_video = '[ TU TIÊN ] VÔ TÌNH THÔN PHỆ KẺ ĐỊCH TA ĐỘT PHÁ ĐẠI VIÊN MÃN - TẬP 1'
-            check_point_id_video_completed = []
-        
-        # Đọc danh sách video từ file JSON
-        with open(file_infor_json_file_path, 'r', encoding='utf-8') as f:
-            list_id_video_bil = [value['id_video'] for value in json.load(f)]
-        
-        # Kiểm tra video đang xử lý
+                           httplib.BadStatusLine, IOError) 
+    if os.path.exists(complete_json_path):
+        with open(complete_json_path, 'r', encoding='utf-8') as f:
+            check_point_id_video_completed = [value.strip() for value in f.readlines()]        
+    else:
+        check_point_id_video_completed = []
+    with open(file_infor_json_file_path, 'r', encoding='utf-8') as f:
+        list_video_bil = [for value in json.load(f) if value['id_video'] not in check_point_id_video_completed]   
+    for range_id in range (len(list_video_bil)):
+        name_video = list_video_bil[range_id]['title_video']        
         if os.path.exists(lauching_file_path):
             with open(lauching_file_path, 'r', encoding='utf-8') as f:
                 id_video = f.read().strip()
@@ -990,5 +983,3 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
-
