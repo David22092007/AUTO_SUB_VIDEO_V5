@@ -795,7 +795,7 @@ if __name__ == "__main__":
                 id_video = f.read().strip()
         
         # Chọn video tiếp theo để xử lý
-        target_id_video_bil = [vid for vid in list_id_video_bil if vid not in check_point_id_video_completed][0]
+        target_id_video_bil = list_video_bil[range_id]['id_video']
         
         if id_video != target_id_video_bil:
             # Tải video mới nếu cần
