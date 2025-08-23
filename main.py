@@ -590,7 +590,7 @@ def fpt_tts(text, output_path, duration_ms, api_keys, speed, voice_name='banmai'
 def thread_saving_video_fpt(detail):
     output_path_part_1,output_path_part_2,url,duration_ms=detail.split('_');output_path=output_path_part_1+'_'+output_path_part_2;duration_ms=duration_ms.replace('\n','')
     out_put_base = output_path.replace('/tts', '/tts_base')
-    while True:
+    for i in range (100):
         response = requests.get(url, stream=True)
         if response.status_code == 200:
             with open(out_put_base, 'wb') as f:
@@ -990,4 +990,5 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
