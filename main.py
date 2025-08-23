@@ -787,7 +787,7 @@ if __name__ == "__main__":
     else:
         check_point_id_video_completed = []
     with open(file_infor_json_file_path, 'r', encoding='utf-8') as f:
-        list_video_bil = [for value in json.load(f) if value['id_video'] not in check_point_id_video_completed]   
+        list_video_bil = [value for value in json.load(f) if value['id_video'] not in check_point_id_video_completed]   
     for range_id in range (len(list_video_bil)):
         name_video = list_video_bil[range_id]['title_video']        
         if os.path.exists(lauching_file_path):
