@@ -136,10 +136,8 @@ def srt_time_to_seconds(srt_time: str) -> float:
         milliseconds = int(ms_part)
         total_seconds = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000
         return total_seconds
-    except ValueError:
+    except :
         print (srt_time)
-        raise ValueError("Invalid time format. Expected HH:MM:SS,mmm")
-
 def format_srt_time(seconds):
     td = timedelta(seconds=seconds)
     total_seconds = int(td.total_seconds())
@@ -992,3 +990,4 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
