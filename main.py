@@ -167,7 +167,7 @@ def filter_srt_detail(srt_path):
                 }
                 metadata_list.append(metadata)
             except:
-                continue
+                None
         i += 1
     return metadata_list
 
@@ -983,4 +983,5 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
