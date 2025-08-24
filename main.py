@@ -650,7 +650,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
             list_start_time_complete = [i['start_time'] for i in checkpoint_dub if i['status'] == 'completed']        
         metadata_list = [i for i in metadata_list if i['start_time'] not in list_start_time_complete]
         max_workers = min(os.cpu_count() or 2, 2)
-        with ThreadPoolExecutor(max_workers=10) as executor:
+        with ThreadPoolExecutor(max_workers=20) as executor:
             future_to_segment = {
                 executor.submit(
                     process_segment_dubbing,
@@ -670,7 +670,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
             if type_tts == 'fpt':
                 with open('url_fpt_out_put_backurl.txt', 'r') as f:
                     list_url_fpt = f.readlines() 
-                with ThreadPoolExecutor(max_workers=10) as executor:
+                with ThreadPoolExecutor(max_workers=20) as executor:
                     executor.map(thread_saving_video_fpt, list_url_fpt)          
         # Kết hợp metadata từ các kết quả
         new_metadata = []
@@ -983,5 +983,6 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
