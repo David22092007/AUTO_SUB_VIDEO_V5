@@ -788,32 +788,34 @@ if __name__ == "__main__":
         check_point_id_video_completed = []
     with open(file_infor_json_file_path, 'r', encoding='utf-8') as f:
         list_video_bil = [value for value in json.load(f) if value['id_video'] not in check_point_id_video_completed]   
-    for range_id in range (len(list_video_bil)):
-        name_video = list_video_bil[range_id]['title_video']        
+    for range_id in range (len(list_video_bil)):    
         if os.path.exists(lauching_file_path):
             with open(lauching_file_path, 'r', encoding='utf-8') as f:
                 id_video = f.read().strip()
         
         # Chọn video tiếp theo để xử lý
         target_id_video_bil = list_video_bil[range_id]['id_video']
-        
         if id_video != target_id_video_bil:
-            # Tải video mới nếu cần
-            cmd = [
-                "yt-dlp",
-                f"https://www.bilibili.com/video/{target_id_video_bil}",
-                "--cookies", "cookies.txt",
-                "-N", "8",
-                "--concurrent-fragments", "4",
-                "--throttled-rate", "100K",
-                "-o", "Videos/%(title)s.%(ext)s",
-                "--retries", "10",
-                "--fragment-retries", "10",
-                "--buffer-size", "16K",
-                "--http-chunk-size", "1M",
-            ]
-            subprocess.run(cmd, check=True)
-            
+            if id_video.find('https://www.bilibili.com') >=0 or id_video.find('https://www.youtube.com') >= 0:
+                # Tải video mới nếu cần
+                cmd = [
+                    "yt-dlp",
+                    f"https://www.bilibili.com/video/{target_id_video_bil}",
+                    "--cookies", "cookies.txt",
+                    "-N", "8",
+                    "--concurrent-fragments", "4",
+                    "--throttled-rate", "100K",
+                    "-o", "Videos/%(title)s.%(ext)s",
+                    "--retries", "10",
+                    "--fragment-retries", "10",
+                    "--buffer-size", "16K",
+                    "--http-chunk-size", "1M",
+                ]
+                subprocess.run(cmd, check=True)
+            else:
+                with open('video.mp4', 'wb') as f:
+                    f.write(requests.get(id_video).content)                   
+                
             # Đổi tên file video
             video_path = glob.glob("Videos/*.mp4")[0]
             new_name = f'Videos/{target_id_video_bil}.mp4'
@@ -957,7 +959,7 @@ if __name__ == "__main__":
                 }
                 data = {
                     "chat_id": CHAT_ID,
-                    "caption": name_video # Chú thích (không bắt buộc)
+                    "caption": 'Video : ' # Chú thích (không bắt buộc)
                 }
 
                 # Gọi API sendVideo
@@ -971,7 +973,7 @@ if __name__ == "__main__":
                     }
                     data = {
                         "chat_id": CHAT_ID,
-                        "caption": 'SRT : '+name_video # Chú thích (không bắt buộc)
+                        "caption": 'SRT : ' # Chú thích (không bắt buộc)
                     }
 
                     # Gọi API sendVideo
@@ -983,6 +985,3 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
-
-
