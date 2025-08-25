@@ -76,7 +76,7 @@ def process_metadata(all_pages_data):
         
         for video in archives:
             metadata = {
-                "id_video": video.get('bvid', ''),
+                "id_video": 'https://www.bilibili.com/video/'+str(video.get('bvid', '')),
                 "background_link": video.get('pic', ''),
                 "title_video": video.get('title', ''),
                 "view_count": video.get('stat', {}).get('view', 0),
@@ -136,3 +136,4 @@ def main(url):
 if __name__ == "__main__":
     url = input('Vui lòng nhập link list Bili : ')
     main(url)
+
