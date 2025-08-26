@@ -791,16 +791,15 @@ if __name__ == "__main__":
     for range_id in range (len(list_video_bil)):    
         if os.path.exists(lauching_file_path):
             with open(lauching_file_path, 'r', encoding='utf-8') as f:
-                id_video = f.read().strip()
-        
+                id_video = f.read().strip();f.close()        
         # Chọn video tiếp theo để xử lý
         target_id_video_bil = list_video_bil[range_id]['id_video']
         if id_video != target_id_video_bil:
-            if id_video.find('https://www.bilibili.com') >=0 or id_video.find('https://www.youtube.com') >= 0:
+            if target_id_video_bil.find('https://www.bilibili.com') >=0 or target_id_video_bil.find('https://www.youtube.com') >= 0:
                 # Tải video mới nếu cần
                 cmd = [
                     "yt-dlp",
-                    f"https://www.bilibili.com/video/{target_id_video_bil}",
+                    f"{target_id_video_bil}",
                     "--cookies", "cookies.txt",
                     "-N", "8",
                     "--concurrent-fragments", "4",
@@ -813,13 +812,12 @@ if __name__ == "__main__":
                 ]
                 subprocess.run(cmd, check=True)
             else:
-                with open('video.mp4', 'wb') as f:
-                    f.write(requests.get(id_video).content)                   
+                setup_directories('Videos')
+                with open('Videos/video.mp4', 'wb') as f:
+                    f.write(requests.get(target_id_video_bil).content)               
                 
             # Đổi tên file video
             video_path = glob.glob("Videos/*.mp4")[0]
-            new_name = f'Videos/{target_id_video_bil}.mp4'
-            os.rename(video_path, new_name)
             
             # Lưu ID video đang xử lý
             with open(lauching_file_path, 'w', encoding='utf-8') as f:
@@ -827,9 +825,9 @@ if __name__ == "__main__":
         
         if select_options == '12':
             full_option = True        
-        input_video = f"Videos/{target_id_video_bil}.mp4"
+        input_video = f"Videos/video.mp4"
         decrease_video_path = input_video.replace(os.path.basename(input_video), 'decrease_video.mp4')
-        final_video_path = input_video.replace(os.path.basename(input_video), f'final_{target_id_video_bil}_video.mp4')
+        final_video_path = input_video.replace(os.path.basename(input_video), f'final_video.mp4')
         output_dir = "dubbed_movie"
         setup_directories(output_dir)
         
