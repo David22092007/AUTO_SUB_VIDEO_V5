@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 import json
 import glob
 import uuid
@@ -13,6 +14,7 @@ import edge_tts
 import threading
 import subprocess
 from queue import Queue
+from pathlib import Path
 import concurrent.futures
 from datetime import timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -660,7 +662,7 @@ def dub_movie(input_video_path, output_dir, api_keys, source_language, target_la
                     segment["text"],
                     target_language,
                     tts_forder_save_path,
-                    ['n9rKtRYQWtT39nCBil4o9JsQsvZEyRDP','WDJxtVTv3EOUbpeXWszOd6WkxWs9LGJQ','pjLFlJzmN4yaYcZPHP2wwMMIx0Pn5lBh'],
+                    ['n9rKtRYQWtT39nCBil4o9JsQsvZEyRDP','WDJxtVTv3EOUbpeXWszOd6WkxWs9LGJQ','pjLFlJzmN4yaYcZPHP2wwMMIx0Pn5lBh','jJ3vZAnoo6l93yoA58g4UYqUKgB3dCrA','pRpfjNY1nBoWbBDanWJQ3ZOzR7LhuThB'],
                     type_tts
                 ): segment
                 for segment in metadata_list
@@ -758,6 +760,117 @@ def sending(BOT_TOKEN,CHANNEL_ID,contents):
 
     response = requests.post(url, headers=headers, data=data)
     print (response.text)
+class VideoSplitter:
+    def __init__(self, max_size_mb=30):
+        self.max_size_mb = max_size_mb
+        self.max_size_bytes = max_size_mb * 1024 * 1024
+    
+    def get_video_duration(self, video_path):
+        """Lấy thời lượng video (giây)"""
+        cmd = [
+            'ffprobe', '-v', 'error',
+            '-show_entries', 'format=duration',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            str(video_path)
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            return float(result.stdout.strip())
+        except (subprocess.CalledProcessError, ValueError):
+            return None
+    
+    def get_video_bitrate(self, video_path):
+        """Lấy bitrate của video (bps)"""
+        cmd = [
+            'ffprobe', '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=bit_rate',
+            '-of', 'default=noprint_wrappers=1:nokey=1',
+            str(video_path)
+        ]
+        
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            bitrate_str = result.stdout.strip()
+            if bitrate_str == 'N/A':
+                # Ước tính bitrate nếu không có thông tin
+                file_size = os.path.getsize(video_path)
+                duration = self.get_video_duration(video_path)
+                return (file_size * 8) / duration if duration else None
+            return float(bitrate_str)
+        except (subprocess.CalledProcessError, ValueError):
+            return None
+    
+    def calculate_segment_duration(self, video_path):
+        """
+        Tính thời lượng mỗi segment dựa trên dung lượng tối đa
+        """
+        duration = self.get_video_duration(video_path)
+        bitrate = self.get_video_bitrate(video_path)
+        
+        if duration is None:
+            raise ValueError("Không thể lấy thời lượng video")
+        
+        if bitrate is None:
+            # Fallback: ước tính dựa trên dung lượng file
+            file_size = os.path.getsize(video_path)
+            estimated_bitrate = (file_size * 8) / duration
+            segment_duration = (self.max_size_bytes * 8) / estimated_bitrate
+        else:
+            # Tính thời lượng mỗi segment (giây)
+            segment_duration = (self.max_size_bytes * 8) / bitrate
+        
+        # Thêm margin an toàn 10%
+        return min(segment_duration * 0.9, duration)
+    
+    def split_by_size(self, input_path, output_pattern=None):
+        """
+        Chia video thành các phần nhỏ hơn 50MB
+        """
+        input_path = Path(input_path)
+        
+        if not input_path.exists():
+            raise FileNotFoundError(f"File không tồn tại: {input_path}")
+        
+        if output_pattern is None:
+            output_pattern = f"{input_path.stem}_part%03d{input_path.suffix}"
+        
+        print(f"Đang xử lý video: {input_path.name}")
+        print(f"Dung lượng tối đa mỗi phần: {self.max_size_mb}MB")
+        
+        # Tính thời lượng mỗi segment
+        try:
+            segment_duration = self.calculate_segment_duration(input_path)
+            print(f"Thời lượng mỗi phần: {segment_duration:.2f} giây")
+        except Exception as e:
+            print(f"Lỗi khi tính toán: {e}")
+            return False
+        
+        # Sử dụng FFmpeg để chia video
+        command = [
+            'ffmpeg', '-i', str(input_path),
+            '-c', 'copy',  # Copy stream không re-encode (nhanh)
+            '-fs', str(self.max_size_bytes),  # Giới hạn dung lượng file
+            '-reset_timestamps', '1',
+            str(output_pattern)
+        ]
+        
+        print("Đang chia video...")
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, check=True)
+            print("✅ Chia video thành công!")
+            
+            # Liệt kê các file đã tạo
+            output_files = list(Path('.').glob(output_pattern.replace('%03d', '*')))
+            for file in output_files:
+                size_mb = os.path.getsize(file) / (1024 * 1024)
+                print(f"📁 {file.name} - {size_mb:.2f}MB")
+            
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"❌ Lỗi khi chia video: {e.stderr}")
+            return False
 if __name__ == "__main__":
     # Cấu hình biến toàn cục
     select_options = '123'
@@ -948,37 +1061,38 @@ if __name__ == "__main__":
                 subprocess.run(cmd, check=True)
                 print("✅ Hoàn tất! Video đã được chèn phụ đề.")
             except subprocess.CalledProcessError as e:
-                print("❌ Lỗi khi chạy FFmpeg:", e)              
+                print("❌ Lỗi khi chạy FFmpeg:", e)
+        splitter = VideoSplitter(max_size_mb=30);output_pattern = "Videos/video_phan_%03d.mp4"
+        success = splitter.split_by_size(final_video_path, output_pattern);listpath=[i for i in glob.glob('Videos/*.mp4') if i.find('video_phan_') >=0 ]
         while True:
-            with open(final_video_path, 'rb') as video_file:
-                # Tạo dictionary cho dữ liệu và files
-                files = {
-                    "video": video_file # Khóa 'video' là bắt buộc cho phương thức sendVideo
-                }
-                data = {
-                    "chat_id": CHAT_ID,
-                    "caption": 'Video : ' # Chú thích (không bắt buộc)
-                }
-
-                # Gọi API sendVideo
-                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
-                response = requests.post(url, data=data, files=files)
-            if response.status_code==200:
-                with open(srt_path, 'rb') as file_path_txt:
+            for i in listpath:
+                with open(i, 'rb') as video_file:
                     # Tạo dictionary cho dữ liệu và files
                     files = {
-                        "video": file_path_txt # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                        "video": video_file # Khóa 'video' là bắt buộc cho phương thức sendVideo
                     }
                     data = {
                         "chat_id": CHAT_ID,
-                        "caption": 'SRT : ' # Chú thích (không bắt buộc)
+                        "caption": 'Video : ' # Chú thích (không bắt buộc)
                     }
 
                     # Gọi API sendVideo
                     url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
-                    response = requests.post(url, data=data, files=files)
-                if response.status_code==200:
-                    break 
+                    response = requests.post(url, data=data, files=files);print (response.text)
+            with open(srt_path, 'rb') as file_path_txt:
+                # Tạo dictionary cho dữ liệu và files
+                files = {
+                    "video": file_path_txt # Khóa 'video' là bắt buộc cho phương thức sendVideo
+                }
+                data = {
+                    "chat_id": CHAT_ID,
+                    "caption": 'SRT : ' # Chú thích (không bắt buộc)
+                }
+
+                # Gọi API sendVideo
+                url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
+                response = requests.post(url, data=data, files=files)            
+            break 
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos');remove_file("url_fpt_out_put_backurl.txt")      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
