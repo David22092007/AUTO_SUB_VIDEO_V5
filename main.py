@@ -1263,7 +1263,7 @@ if __name__ == "__main__":
             except subprocess.CalledProcessError as e:
                 print("❌ Lỗi khi chạy FFmpeg:", e)
                 
-        upload_video_automation(final_video_path,title='ĐẠI TRỌNG ÁN',VALID_PRIVACY_STATUSES)            
+        upload_video_automation(final_video_path,'ĐẠI TRỌNG ÁN',VALID_PRIVACY_STATUSES)            
         with open(srt_path, 'rb') as file_path_txt:
             # Tạo dictionary cho dữ liệu và files
             files = {
