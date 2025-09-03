@@ -514,7 +514,7 @@ def process_segment_dubbing(start_time, end_time, segment_index, translated_text
         logging.error(f"Dubbing error: {e}")
         return None
 
-def detect_langue(audio_path, model_AI='tiny'):
+def detect_langue(audio_path, model_AI='base'):
     model = whisper.load_model(model_AI)
     audio = whisper.load_audio(audio_path)
     audio = whisper.pad_or_trim(audio)
@@ -1282,3 +1282,4 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
