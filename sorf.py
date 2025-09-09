@@ -1,14 +1,9 @@
 import re
 import json
 
-def extract_video_info(url):
-    # Sử dụng regex để trích xuất video ID từ URL
-    pattern = r'/video/(\d+)/'
-    match = re.search(pattern, url)
-    
-    if match:
-        video_id = match.group(1)
-        return {"id_video": video_id}
+def extract_video_info(url):    
+    if url:
+        return {"id_video": url}
     else:
         return None
 
