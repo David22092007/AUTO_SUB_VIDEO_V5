@@ -1185,7 +1185,7 @@ if __name__ == "__main__":
             else:
                 setup_directories('Videos')
                 with open('Videos/video.mp4', 'wb') as f:
-                    f.write(requests.get(target_id_video_bil).content)  \                           
+                    f.write(requests.get(target_id_video_bil).content)                             
             `    
             # Đổi tên file video
             video_path = glob.glob("Videos/*.mp4")[0]
@@ -1339,6 +1339,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
