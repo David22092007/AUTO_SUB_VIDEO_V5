@@ -1180,7 +1180,7 @@ if __name__ == "__main__":
                 subprocess.run(cmd, check=True)
             elif target_id_video_bil.find('https://www.iesdouyin.com') ==0:
                 with open('Videos/video.mp4', 'wb') as f:
-                    link_dowload_video_douyin=save_video_douyin(target_id_video_bil)
+                    link_dowload_video_douyin=save_video_douyin(target_id_video_bil);print (link_dowload_video_douyin)
                     f.write(requests.get(link_dowload_video_douyin).content)                    
             else:
                 setup_directories('Videos')
@@ -1339,6 +1339,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
