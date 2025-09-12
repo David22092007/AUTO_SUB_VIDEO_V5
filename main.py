@@ -1180,12 +1180,13 @@ if __name__ == "__main__":
                 subprocess.run(cmd, check=True)
             elif target_id_video_bil.find('https://www.iesdouyin.com') ==0:
                 with open('Videos/video.mp4', 'wb') as f:
-                    f.write(requests.get(save_video_douyin(target_id_video_bil)).content)                    
+                    link_dowload_video_douyin=save_video_douyin(target_id_video_bil)
+                    f.write(requests.get(link_dowload_video_douyin).content)                    
             else:
                 setup_directories('Videos')
                 with open('Videos/video.mp4', 'wb') as f:
-                    f.write(requests.get(target_id_video_bil).content)               
-                
+                    f.write(requests.get(target_id_video_bil).content)  \                           
+            `    
             # Đổi tên file video
             video_path = glob.glob("Videos/*.mp4")[0]
             
@@ -1338,5 +1339,6 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
