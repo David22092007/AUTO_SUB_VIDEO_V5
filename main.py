@@ -94,9 +94,12 @@ def save_video_douyin(url):
 
     response = requests.get('https://downloader.twdown.online/search', params=params, headers=headers)
     soup=BeautifulSoup(response.text, 'html.parser');link=''
+    with open ('web.html','w') as f:
+      f.write(response.text)
     while True:
         for i in  (soup.find_all('a')):
-            if  (i.get('href')).find('https://downloader.twdown.online?ref=') != -1:
+            num = i.get('href')).find('https://downloader.twdown.online?ref='
+            if  num != -1:
                 link=(i.get('href'))
                 break       
         if link !='':
@@ -1339,6 +1342,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
