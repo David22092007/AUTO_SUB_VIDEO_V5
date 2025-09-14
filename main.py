@@ -96,7 +96,7 @@ def save_video_douyin(url):
     soup=BeautifulSoup(response.text, 'html.parser');link=''
     while True:
         for i in  (soup.find_all('a')):
-            if  (i.get('href')).find('https://downloader.twdown.online?ref=&title=+#url=') != -1:
+            if  (i.get('href')).find('https://downloader.twdown.online?ref=&amp;title=#url=') != -1:
                 link=(i.get('href'))
                 break       
         if link !='':
@@ -1181,9 +1181,7 @@ if __name__ == "__main__":
             elif target_id_video_bil.find('https://www.iesdouyin.com') ==0:
                 setup_directories('Videos')
                 with open('Videos/video.mp4', 'wb') as f:
-                    link_dowload_video_douyin=save_video_douyin(target_id_video_bil);print (link_dowload_video_douyin)
-                    print ('End')
-                    exit()
+                    link_dowload_video_douyin=save_video_douyin(target_id_video_bil)
                     f.write(requests.get(link_dowload_video_douyin).content)                    
             else:
                 setup_directories('Videos')
@@ -1341,6 +1339,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
