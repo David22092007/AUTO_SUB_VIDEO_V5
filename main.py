@@ -118,7 +118,7 @@ def save_video_douyin(url):
     }
 
     params = {
-        'url': link.replace('https://downloader.twdown.online?ref=&title=+#url=',''),
+        'url': link.replace('https://downloader.twdown.online?ref=&title=#url=',''),
     }
 
     response = requests.get('https://downloader.twdown.online/load_url', params=params, headers=headers)
@@ -1339,6 +1339,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
