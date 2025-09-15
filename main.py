@@ -976,29 +976,32 @@ def upload_video(youtube, options):
             time.sleep(sleep_seconds)
             error = None # Reset error for next retry attempt
 
-def upload_video_automation(video_path,title,VALID_PRIVACY_STATUSES):
-    """Main function to parse arguments, authenticate, and upload video."""
-    argparser.add_argument("--file", default=video_path, required=True, help="Path to the video file to upload.")
-    argparser.add_argument("--title", default=title, help="Title of the video.")
-    argparser.add_argument("--description", default='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .')
-    argparser.add_argument("--category", default="22",
-                           help="Numeric video category ID. See [https://developers.google.com/youtube/v3/docs/videoCategories/list](https://developers.google.com/youtube/v3/docs/videoCategories/list) for a list of categories.")
-    argparser.add_argument("--keywords", default="lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya", help="Comma-separated video keywords.")
-    argparser.add_argument("--privacyStatus", choices=VALID_PRIVACY_STATUSES,
-                           default="private", help="Video privacy status (public, private, or unlisted).")
-    args = argparser.parse_args()
-
+class UploadOptions:
+    def __init__(self, file, title, description, category, keywords, privacyStatus):
+        self.file = file
+        self.title = title
+        self.description = description
+        self.category = category
+        self.keywords = keywords
+        self.privacyStatus = privacyStatus
+def upload_video_automation(video_path, title, VALID_PRIVACY_STATUSES , description=='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .', keywords='lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya', category='22', privacy_status='private'):
     # Ensure client_secrets.json exists
+    CLIENT_SECRETS_FILE = "client_secrets.json"
     if not os.path.exists(CLIENT_SECRETS_FILE):
-        print(f"ERROR: '{CLIENT_SECRETS_FILE}' not found.")
-        print(f"Please download your OAuth 2.0 client secrets JSON file from Google Cloud Console")
-        print(f"and save it as '{CLIENT_SECRETS_FILE}' in the same directory as this script.")
-        print(f"For more info: [https://developers.google.com/api-client-library/python/guide/aaa_client_secrets](https://developers.google.com/api-client-library/python/guide/aaa_client_secrets)")
         sys.exit(1)
+    # Build options object
+    options = UploadOptions(
+        file=video_path,
+        title=title,
+        description=description,
+        category=category,
+        keywords=keywords,
+        privacyStatus=privacy_status
+    )
 
     youtube = authenticate_youtube()
     try:
-        upload_video(youtube, args)
+        upload_video(youtube, options)
     except googleapiclient.errors.HttpError as e:
         print(f"An HTTP error {e.resp.status} occurred during video upload:\n{e.content}")
     except Exception as e:
@@ -1339,16 +1342,3 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
-
-
-
-
-
-
-
-
-
-
-
-
