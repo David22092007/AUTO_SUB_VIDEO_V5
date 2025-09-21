@@ -984,7 +984,7 @@ class UploadOptions:
         self.category = category
         self.keywords = keywords
         self.privacyStatus = privacyStatus
-def upload_video_automation(video_path, title, VALID_PRIVACY_STATUSES , description=='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .', keywords='lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya', category='22', privacy_status='private'):
+def upload_video_automation(video_path, title, VALID_PRIVACY_STATUSES , description='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .', keywords='lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya', category='22', privacy_status='private'):
     # Ensure client_secrets.json exists
     CLIENT_SECRETS_FILE = "client_secrets.json"
     if not os.path.exists(CLIENT_SECRETS_FILE):
@@ -1342,4 +1342,5 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
