@@ -1120,7 +1120,8 @@ def upload_video_to_youtube_automation(category,title,description,keywords,priva
     except googleapiclient.errors.HttpError as e:
         print(f"An HTTP error {e.resp.status} occurred during video upload:\n{e.content}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")def sending(BOT_TOKEN,CHANNEL_ID,contents):
+        print(f"An unexpected error occurred: {e}")
+def sending(BOT_TOKEN,CHANNEL_ID,contents):
     files={}
     data={}
     data.update({"content": contents})
@@ -1476,6 +1477,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
