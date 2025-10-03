@@ -976,37 +976,151 @@ def upload_video(youtube, options):
             time.sleep(sleep_seconds)
             error = None # Reset error for next retry attempt
 
-class UploadOptions:
-    def __init__(self, file, title, description, category, keywords, privacyStatus):
-        self.file = file
-        self.title = title
-        self.description = description
-        self.category = category
-        self.keywords = keywords
-        self.privacyStatus = privacyStatus
-def upload_video_automation(video_path, title, VALID_PRIVACY_STATUSES , description='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .', keywords='lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya', category='22', privacy_status='private'):
-    # Ensure client_secrets.json exists
-    CLIENT_SECRETS_FILE = "client_secrets.json"
-    if not os.path.exists(CLIENT_SECRETS_FILE):
-        sys.exit(1)
-    # Build options object
-    options = UploadOptions(
-        file=video_path,
-        title=title,
-        description=description,
-        category=category,
-        keywords=keywords,
-        privacyStatus=privacy_status
+def authenticate_youtube():
+    """Authenticates the user and returns a YouTube API service object."""
+    credentials = None
+
+    # Disable OAuthlib's HTTPS verification when running locally.
+    # DO NOT leave this setting enabled in production.
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+    # Check if a token file exists and load credentials from it
+    if os.path.exists(TOKEN_FILE):
+        try:
+            credentials = google.oauth2.credentials.Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+            print("Loaded credentials from token.json")
+        except Exception as e:
+            print(f"Error loading credentials from token.json: {e}")
+            credentials = None # Force re-authentication if token is invalid
+
+    # If no valid credentials, initiate the OAuth flow
+    if not credentials or not credentials.valid:
+        if credentials and credentials.expired and credentials.refresh_token:
+            # Refresh the token if it's expired and a refresh token is available
+            print("Credentials expired, attempting to refresh...")
+            try:
+                credentials.refresh(google.auth.transport.requests.Request())
+                print("Credentials refreshed successfully.")
+            except Exception as e:
+                print(f"Error refreshing credentials: {e}")
+                credentials = None # Force full re-authentication if refresh fails
+        
+        if not credentials or not credentials.valid:
+            print("Initiating new authentication flow...")
+            flow = google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file(
+                CLIENT_SECRETS_FILE, SCOPES)
+            try:
+                # This will start a local web server to handle the OAuth redirect
+                credentials = flow.run_local_server(port=8080) # Explicitly set port
+                print("Authentication successful.")
+            except requests.exceptions.ConnectionError as e:
+                print(f"\nERROR: Failed to connect to Google's authentication server during token exchange.")
+                print(f"This often indicates a network issue, an interfering firewall/antivirus, or outdated SSL certificates.")
+                print(f"Please check your internet connection, temporarily disable firewall/antivirus (for testing),")
+                print(f"and ensure your Python's SSL certificates are up-to-date (e.g., run 'Install Certificates.command' on Windows).")
+                sys.exit(1)
+            except Exception as e:
+                print(f"An unexpected error occurred during authentication: {e}")
+                sys.exit(1)
+
+        # Save the credentials for future use
+        with open(TOKEN_FILE, 'w') as token:
+            token.write(credentials.to_json())
+            print(f"Credentials saved to {TOKEN_FILE}")
+
+    # Build the YouTube API service object
+    youtube = googleapiclient.discovery.build(
+        "youtube", "v3", credentials=credentials)
+
+    return youtube
+
+def upload_video(youtube, category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS):
+    """Uploads a video to YouTube with retry logic."""
+    tags = None
+    if keywords:
+        tags = keywords
+    request_body = {
+        "snippet": {
+            "categoryId": category,
+            "title": title,
+            "description": description,
+            "tags": tags
+        },
+        "status": {
+            "privacyStatus": privacy_status
+        }
+    }
+
+    media_file = video_path
+    if not os.path.exists(media_file):
+        sys.exit(f"Error: Video file '{media_file}' not found.")
+
+    insert_request = youtube.videos().insert(
+        part="snippet,status",
+        body=request_body,
+        media_body=googleapiclient.http.MediaFileUpload(media_file, chunksize=-1, resumable=True)
     )
+
+    response = None
+    error = None
+    retry = 0
+
+    print(f"Starting upload ")
+
+    while response is None:
+        try:
+            status, response = insert_request.next_chunk()
+            if status:
+                print(f"Upload {int(status.progress() * 100)}%")
+
+            if response is not None:
+                if 'id' in response:
+                    print(f"Video uploaded successfully with ID: {response['id']}")
+                else:
+                    sys.exit(f"The upload failed with an unexpected response: {response}")
+        except googleapiclient.errors.HttpError as e:
+            if e.resp.status in RETRIABLE_STATUS_CODES:
+                error = f"A retriable HTTP error {e.resp.status} occurred:\n{e.content}"
+            else:
+                raise # Re-raise non-retriable HTTP errors
+        except RETRIABLE_EXCEPTIONS as e:
+            error = f"A retriable network error occurred: {e}"
+        except Exception as e:
+            # Catch any other unexpected errors during chunk upload
+            print(f"An unexpected error occurred during upload: {e}")
+            sys.exit(1)
+
+        if error is not None:
+            print(error)
+            retry += 1
+            if retry > MAX_RETRIES:
+                sys.exit(f"Exceeded maximum retries ({MAX_RETRIES}). Giving up on upload.")
+
+            max_sleep = 2 ** retry
+            sleep_seconds = random.random() * max_sleep
+            print(f"Sleeping {sleep_seconds:.2f} seconds and then retrying...")
+            time.sleep(sleep_seconds)
+            error = None # Reset error for next retry attempt
+
+def upload_video_to_youtube_automation(category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS):
+    
+    #category : string , title : string , description : string , keywords_list : string ngăn cách bởi dấu ( , ) ,privac
+    
+    # Ensure client_secrets.json exists
+    if not os.path.exists(CLIENT_SECRETS_FILE):
+        print(f"ERROR: '{CLIENT_SECRETS_FILE}' not found.")
+        print(f"Please download your OAuth 2.0 client secrets JSON file from Google Cloud Console")
+        print(f"and save it as '{CLIENT_SECRETS_FILE}' in the same directory as this script.")
+        print(f"For more info: [https://developers.google.com/api-client-library/python/guide/aaa_client_secrets](https://developers.google.com/api-client-library/python/guide/aaa_client_secrets)")
+        sys.exit(1)
 
     youtube = authenticate_youtube()
     try:
-        upload_video(youtube, options)
+        upload_video(youtube, category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS)
     except googleapiclient.errors.HttpError as e:
         print(f"An HTTP error {e.resp.status} occurred during video upload:\n{e.content}")
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-def sending(BOT_TOKEN,CHANNEL_ID,contents):
+        print(f"An unexpected error occurred: {e}")def sending(BOT_TOKEN,CHANNEL_ID,contents):
     files={}
     data={}
     data.update({"content": contents})
@@ -1322,10 +1436,30 @@ if __name__ == "__main__":
                 subprocess.run(cmd, check=True)
                 print("✅ Hoàn tất! Video đã được chèn phụ đề.")
             except subprocess.CalledProcessError as e:
-                print("❌ Lỗi khi chạy FFmpeg:", e)
-                
-        upload_video_automation(final_video_path,'ĐẠI TRỌNG ÁN',VALID_PRIVACY_STATUSES)            
-        with open(srt_path, 'rb') as file_path_txt:
+                print("❌ Lỗi khi chạy FFmpeg:", e)       
+        description='Sử lý âm thanh một điều tuyệt vời để khai thác thông tin & trực quan hóa dữ liệu điều này .'
+        keywords='lịch sử thế giới , kể chuyện đêm khuya , lịch sử trung hoa , trung hoa dân quốc , Trung Quốc , người kể chuyện , Truyện Đêm Khuya'
+        category='22'
+        privacy_status='private'
+        RETRIABLE_EXCEPTIONS = (
+            httplib.NotConnected,
+            httplib.IncompleteRead,
+            httplib.ImproperConnectionState,
+            httplib.CannotSendRequest,
+            httplib.CannotSendHeader,
+            httplib.ResponseNotReady,
+            httplib.BadStatusLine,
+            IOError # General I/O errors
+        )
+        TOKEN_FILE = 'token.json'
+        CLIENT_SECRETS_FILE = "client_secrets.json" # Changed to common convention
+        privacy_status = ("public", "private", "unlisted")    
+        CLIENT_SECRETS_FILE = "client_secrets.json"
+        SCOPES = "https://www.googleapis.com/auth/youtube.upload"
+        RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
+        MAX_RETRIES = 10
+        upload_video_to_youtube_automation(category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS)      
+      with open(srt_path, 'rb') as file_path_txt:
             # Tạo dictionary cho dữ liệu và files
             files = {
                 "video": file_path_txt # Khóa 'video' là bắt buộc cho phương thức sendVideo
@@ -1342,5 +1476,6 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
