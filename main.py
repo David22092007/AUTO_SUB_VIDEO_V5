@@ -31,7 +31,7 @@ import google.oauth2.credentials
 import google.auth.transport.requests
 
 import whisper
-import moviepy.editor as mp
+import moviepy as mp
 
 from pydub import AudioSegment
 import librosa
@@ -1461,7 +1461,3 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
-
-
-
