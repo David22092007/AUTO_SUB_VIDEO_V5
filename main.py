@@ -1459,20 +1459,7 @@ if __name__ == "__main__":
         SCOPES = "https://www.googleapis.com/auth/youtube.upload"
         RETRIABLE_STATUS_CODES = [500, 502, 503, 504]
         MAX_RETRIES = 10
-        upload_video_to_youtube_automation(category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS)      
-      with open(srt_path, 'rb') as file_path_txt:
-            # Tạo dictionary cho dữ liệu và files
-            files = {
-                "video": file_path_txt # Khóa 'video' là bắt buộc cho phương thức sendVideo
-            }
-            data = {
-                "chat_id": CHAT_ID,
-                "caption": 'SRT : ' # Chú thích (không bắt buộc)
-            }
-
-            # Gọi API sendVideo
-            url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendVideo"
-            response = requests.post(url, data=data, files=files)            
+        upload_video_to_youtube_automation(category,title,description,keywords,privacy_status,video_path,CLIENT_SECRETS_FILE,SCOPES,RETRIABLE_STATUS_CODES,MAX_RETRIES,RETRIABLE_EXCEPTIONS)              
         remove_file(f"checkpoint_dub_{os.path.basename(input_video)}.json");clear_folder('tts');clear_folder('sub');clear_folder('srt');remove_file(f"checkpoint_transcript_{os.path.basename(input_video)}.json");clear_folder("temp_segments");clear_folder('Videos');remove_file("url_fpt_out_put_backurl.txt")      
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
