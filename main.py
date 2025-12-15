@@ -1,3 +1,4 @@
+print ('START OPEN APP')
 import os
 import sys
 import math
@@ -1464,6 +1465,7 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
+
 
 
 
