@@ -1,4 +1,3 @@
-print ('START OPEN APP')
 import os
 import sys
 import math
@@ -75,33 +74,30 @@ def group_consecutive_times(times, threshold_ms=50):
 def save_video_douyin(url):
     headers = {
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'accept-language': 'vi,en-US;q=0.9,en;q=0.8,fr-FR;q=0.7,fr;q=0.6',
+        'accept-language': 'en-US,en;q=0.9',
+        'cache-control': 'max-age=0',
         'priority': 'u=0, i',
-        'sec-ch-ua': '"Not;A=Brand";v="99", "Google Chrome";v="139", "Chromium";v="139"',
+        'sec-ch-ua': '"Google Chrome";v="143", "Chromium";v="143", "Not A(Brand";v="24"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"',
         'sec-fetch-dest': 'document',
         'sec-fetch-mode': 'navigate',
-        'sec-fetch-site': 'same-origin',
+        'sec-fetch-site': 'none',
         'sec-fetch-user': '?1',
         'upgrade-insecure-requests': '1',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-        'cookie': 'fpestid=nn6HSJ89WCMhYTN1sGgMEAQj5M4SKiRxEVJvsbpSA1jj8m-JvsUyxM4fi6sYT9havDRY1Q; s_id=f8U2qlmonIWUEnvfRaIqrG2urjLMl8cq0BnfQQuo; XSRF-TOKEN=eyJpdiI6IkFUZjVDdFNxS1daSWVmVnVSVEQ2b0E9PSIsInZhbHVlIjoiQWN2OVBtQ0tIY2NqdGpwVDVcL3o2VzRNMEZcL25ISVNoeFEraVpld2Q4S1U4bjFkQlA2dDhLSTYzRDlpNHFkYXJzIiwibWFjIjoiZTFiODQ2YjQ3ZTc4MjkyYWJhNDM3ZTVmNDI1MDM4MWY4ZTk5YTdhODgwZGVmZWQ1YzdmOTU0MTc1YmE5MDVmYiJ9',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36',
+        'cookie': 's_id=JsS0bHBOOOwNbhutoOnzqygq6uZnqZ76asZkHZtf; fpestid=ug___VKqwt9ta_RROa68QV_FLUYmWhXTFaE8DUZKbvGaoP2ClSvua2i1bHSBvkzg6PhgUQ; __gads=ID=ae1597f5e1f5579c:T=1765787960:RT=1765788511:S=ALNI_MatiEYcqO41QzVTXYjjM-1O_Ztx-Q; __gpi=UID=000011cb2a0356f0:T=1765787960:RT=1765788511:S=ALNI_Mb5EsWitPBPKnb3jaTh3QqIVrs2fg; __eoi=ID=8019400a96b04078:T=1765787960:RT=1765788511:S=AA-AfjZGG7YsfY3H3iPJO9x2tyQs; FCCDCF=%5Bnull%2Cnull%2Cnull%2Cnull%2Cnull%2Cnull%2C%5B%5B32%2C%22%5B%5C%224219edc5-2be2-4679-ab3c-fb9298fd30f1%5C%22%2C%5B1765787961%2C421000000%5D%5D%22%5D%5D%5D; FCNEC=%5B%5B%22AKsRol-ue_RLQwfvtkBdT_PFJmspkMkg_t2mA61o2cnnulXrsmQMrnJdxQ_LuTKwvDcW4_QlGLme96Mci9ldg7uyBzQZ8B2N6_-PpszgLjVEztyjOnyyLW_Rs3-ad9q_mftMQ3PytoiXkohnbXOk1cwGgFVEIYBqow%3D%3D%22%5D%5D; XSRF-TOKEN=eyJpdiI6ImtwTFpmYnR6ZU5iRncyb2xPc3duQkE9PSIsInZhbHVlIjoiTFRKSGZrT05NTmo4MGZhUjh6b3BBQm5jbVl2dnhIeG1vOWhRbmdXUlVBWnhvTXZoT2xBTlRyQkNwRTlzd2x3NiIsIm1hYyI6IjQ4YzM1MDdiYmJhZDRjZDdlNDU2ZTU2OGMxNjc5MDhkYWFlZDA2M2IxOWU2ZGE0ZWJjMWU4MjkzNjA5N2E4NzcifQ%3D%3D',
     }
 
-    params = {
-        'search': url,
-    }
-
-    response = requests.get('https://downloader.twdown.online/search', params=params, headers=headers)
+    response = requests.get(f'https://downloader.twdown.online/search?search={url}',
+        headers=headers,
+    )
     soup=BeautifulSoup(response.text, 'html.parser');link=''
-    while True:
-        for i in  (soup.find_all('a')):
-            if  i.get('href').find('https://downloader.twdown.online?ref=') != -1:
-                link=(i.get('href'))
-                break       
-        if link !='':
-            break                                  
+    five_links = soup.find_all('a', limit=11)
+    for i in five_links:
+        if (i['href']).find('https://downloader.twdown.online?ref=&title=') >=0:
+            link=i['href']
+            break                               
     headers = {
         'accept': '*/*',
         'accept-language': 'vi,en-US;q=0.9,en;q=0.8,fr-FR;q=0.7,fr;q=0.6',
@@ -1465,7 +1461,6 @@ if __name__ == "__main__":
         with open(complete_json_path, 'a') as f:
             f.write(f'{target_id_video_bil}\n')
             f.close()
-
 
 
 
